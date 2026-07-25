@@ -1,0 +1,15 @@
+# Secrets / local env (never commit)
+proxy.env
+.env
+.env.local
+
+# Ansible
+ansible/logs/*
+!ansible/logs/.gitkeep
+
+# Editor / OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/

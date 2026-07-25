@@ -1,0 +1,94 @@
+- name: Deploy nginx-proxy + acme-companion to DEV server
+  vars_files:
+    - "vars_{{ filevar }}.yml"
+
+  hosts: "{{ ansible_hosts }}"
+  remote_user: "{{ ansible_user }}"
+  gather_facts: false
+
+  tasks:
+    - name: Ensure deploy directory exists
+      ansible.builtin.file:
+        path: "{{ deploy_dest }}"
+        state: directory
+        mode: "0755"
+      tags:
+        - dev
+        - deploy
+        - sync
+        - bootstrap
+
+    - name: Sync project to server
+      ansible.posix.synchronize:
+        src: "{{ deploy_src }}/"
+        dest: "{{ deploy_dest }}/"
+        delete: false
+        rsync_opts: "{{ rsync_excludes }}"
+        use_ssh_args: true
+      delegate_to: localhost
+      tags:
+        - dev
+        - deploy
+        - sync
+
+    - name: Check if proxy.env exists on server
+      ansible.builtin.stat:
+        path: "{{ deploy_dest }}/proxy.env"
+      register: proxy_env
+      tags:
+        - dev
+        - deploy
+        - bootstrap
+
+    - name: Bootstrap proxy.env from example
+      ansible.builtin.copy:
+        src: "{{ deploy_dest }}/proxy.env.example"
+        dest: "{{ deploy_dest }}/proxy.env"
+        remote_src: true
+        mode: "0600"
+      when: not proxy_env.stat.exists
+      tags:
+        - bootstrap
+        - dev
+        - deploy
+
+    - name: Require proxy.env with a real DEFAULT_EMAIL
+      ansible.builtin.shell: |
+        set -euo pipefail
+        env_path="{{ deploy_dest }}/proxy.env"
+        if [ ! -f "$env_path" ]; then
+          echo "Missing $env_path — run --tags=bootstrap then set DEFAULT_EMAIL." >&2
+          exit 1
+        fi
+        if grep -qE '^DEFAULT_EMAIL=you@example\.com$' "$env_path"; then
+          echo "Edit $env_path and set a real DEFAULT_EMAIL before compose up." >&2
+          exit 1
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
+      tags:
+        - dev
+        - deploy
+        - compose
+
+    - name: Pull and start Docker Compose stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ deploy_dest }}"
+        project_name: proxy
+        files:
+          - "{{ compose_file }}"
+        env_files:
+          - "{{ deploy_dest }}/proxy.env"
+        state: present
+        pull: always
+        recreate: auto
+      tags:
+        - dev
+        - deploy
+        - compose
+
+# ansible-playbook deploy.yml -e "filevar=dev" --tags=dev
+# ansible-playbook deploy.yml -e "filevar=dev" --tags=sync
+# ansible-playbook deploy.yml -e "filevar=dev" --tags=compose
+# ansible-playbook deploy.yml -e "filevar=dev" --tags=bootstrap
