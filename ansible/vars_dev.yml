@@ -1,7 +1,7 @@
 ansible_user: root
 ansible_hosts: dev_hosts
 # CI sets ANSIBLE_PRIVATE_KEY_FILE; locally default to the Beget deploy key.
-ansible_ssh_private_key_file: "{{ lookup('env', 'ANSIBLE_PRIVATE_KEY_FILE') | default('~/.ssh/id_beget_ebaluksf', true) }}"
+ansible_ssh_private_key_file: "{{ lookup('env', 'DEV_SSH_PRIVATE_KEY') | default('~/.ssh/id_beget_ebaluksf', true) }}"
 
 deploy_src: "{{ playbook_dir }}/.."
 deploy_dest: /home/appuser/proxy
