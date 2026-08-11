@@ -112,6 +112,6 @@ jobs:
           fi
           ansible-playbook deploy.yml \
             -e "filevar=dev" \
-            -e "ansible_user=appuser" \
+            -e "ansible_user=root" \
             -e "ansible_ssh_private_key_file=${ANSIBLE_PRIVATE_KEY_FILE}" \
             --tags="$TAGS"
